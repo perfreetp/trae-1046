@@ -1,659 +1,784 @@
 import React, { useState, useMemo } from 'react';
-import { Row, Col, Card, Table, Button, DatePicker, Select, Space, Tag, message, Dropdown, MenuProps } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import {
+  Row,
+  Col,
+  Card,
+  Button,
+  Select,
+  DatePicker,
+  Table,
+  Modal,
+  Tag,
+  Space,
+  Dropdown,
+  MenuProps,
+  message,
+  Divider,
+  List,
+} from 'antd';
+import {
+  Download,
+  BarChart3,
+  TrendingUp,
+  AlertTriangle,
+  MessageSquare,
+  FileText,
+  HandshakeIcon,
+  TrendingUp as ProgressIcon,
+  ClipboardCheck,
+} from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
-import { DownloadOutlined, BarChartOutlined, PieChartOutlined, LineChartOutlined, FileExcelOutlined, FileTextOutlined } from '@ant-design/icons';
-import { mockStatisticsData } from '@/mock/statistics';
-import { mockClues, mockComplaints } from '@/mock/clues';
-import { PROJECT_TYPE_OPTIONS, PROJECT_STATUS_OPTIONS } from '@/utils/constants';
-import { formatMoney, formatDate, formatDateTime } from '@/utils/format';
-import type { Project } from '@/types';
+import type { ColumnsType } from 'antd/es/table';
+import type { Project, Contract, Clue, Complaint, Announcement } from '@/types';
+import {
+  PROJECT_TYPE_OPTIONS,
+  PROJECT_STATUS_OPTIONS,
+  ANNOUNCEMENT_TYPE_OPTIONS,
+  ANNOUNCEMENT_STATUS_OPTIONS,
+  CLUE_SOURCE_OPTIONS,
+  RISK_LEVEL_OPTIONS,
+  COMPLAINT_STATUS_OPTIONS,
+  MILESTONE_STATUS_OPTIONS,
+} from '@/utils/constants';
+import { formatMoney, formatDateTime, formatDate } from '@/utils/format';
 import dayjs from 'dayjs';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
-const initialProjects: Project[] = [
+const mockProjects: Project[] = [
   {
-    id: 'P001',
-    name: '市民服务中心建设项目',
-    code: 'GC-2026-001',
-    type: 'engineering',
-    budget: 280000000,
-    purchaser: '市政务服务管理局',
-    agency: '市招标代理有限公司',
-    status: 'completed',
-    registerDate: '2026-01-15',
-    description: '新建市民服务中心大楼，总建筑面积约50000平方米',
-    attachments: [],
+    id: 'P001', name: '市民服务中心装修工程', code: 'GC-2026-001',
+    type: 'engineering', budget: 25000000, purchaser: '市政务服务管理局',
+    agency: '市政府采购中心', status: 'completed', registerDate: '2026-01-15',
+    description: '', attachments: [],
   },
   {
-    id: 'P002',
-    name: '城市智慧交通系统采购',
-    code: 'CG-2026-005',
-    type: 'procurement',
-    budget: 85000000,
-    purchaser: '市交通运输局',
-    agency: '市政府采购中心',
-    status: 'bidding',
-    registerDate: '2026-03-20',
-    description: '采购城市智慧交通管理系统及相关设备',
-    attachments: [],
+    id: 'P002', name: '市属医院医疗设备采购项目', code: 'CG-2026-005',
+    type: 'procurement', budget: 15800000, purchaser: '市卫生健康委员会',
+    agency: '市政府采购中心', status: 'performing', registerDate: '2026-02-20',
+    description: '', attachments: [],
   },
   {
-    id: 'P003',
-    name: '国有土地使用权出让',
-    code: 'CQ-2026-002',
-    type: 'property',
-    budget: 520000000,
-    purchaser: '市自然资源和规划局',
-    agency: '市公共资源交易中心',
-    status: 'completed',
-    registerDate: '2026-02-10',
-    description: '位于城东新区的商业用地出让，面积约80亩',
-    attachments: [],
+    id: 'P003', name: '工业园区标准厂房产权转让', code: 'CQ-2026-003',
+    type: 'property', budget: 85000000, purchaser: '市工业园区管委会',
+    agency: '市产权交易中心', status: 'contract', registerDate: '2026-03-10',
+    description: '', attachments: [],
   },
   {
-    id: 'P004',
-    name: '城市道路绿化提升工程',
-    code: 'GC-2026-012',
-    type: 'engineering',
-    budget: 12000000,
-    purchaser: '市城市管理局',
-    agency: '市绿化工程监理公司',
-    status: 'performing',
-    registerDate: '2026-04-05',
-    description: '城市主干道绿化景观提升改造，全长约15公里',
-    attachments: [],
+    id: 'P004', name: '城市道路绿化提升工程', code: 'GC-2026-012',
+    type: 'engineering', budget: 12000000, purchaser: '市园林绿化局',
+    agency: '市公共资源交易中心', status: 'announced', registerDate: '2026-04-05',
+    description: '', attachments: [],
   },
   {
-    id: 'P005',
-    name: '智慧校园信息化建设项目',
-    code: 'CG-2026-018',
-    type: 'procurement',
-    budget: 35000000,
-    purchaser: '市教育局',
-    agency: '市教育技术装备中心',
-    status: 'evaluating',
-    registerDate: '2026-04-18',
-    description: '市属10所学校智慧校园信息化建设',
-    attachments: [],
+    id: 'P005', name: '智慧校园信息化建设项目', code: 'CG-2026-018',
+    type: 'procurement', budget: 6800000, purchaser: '市教育局',
+    agency: '市政府采购中心', status: 'bidding', registerDate: '2026-04-15',
+    description: '', attachments: [],
   },
   {
-    id: 'P006',
-    name: '污水处理厂二期扩建工程',
-    code: 'GC-2026-020',
-    type: 'engineering',
-    budget: 156000000,
-    purchaser: '市水务局',
-    agency: '市水务工程建设管理处',
-    status: 'bidding',
-    registerDate: '2026-05-08',
-    description: '日处理能力从5万吨扩建至10万吨',
-    attachments: [],
+    id: 'P006', name: '污水处理厂二期扩建工程', code: 'GC-2026-020',
+    type: 'engineering', budget: 38000000, purchaser: '市水务局',
+    agency: '市公共资源交易中心', status: 'registered', registerDate: '2026-05-08',
+    description: '', attachments: [],
   },
   {
-    id: 'P007',
-    name: '公立医院医疗设备集中采购',
-    code: 'CG-2026-025',
-    type: 'procurement',
-    budget: 185000000,
-    purchaser: '市卫生健康委员会',
-    agency: '市医疗器械采购中心',
-    status: 'announced',
-    registerDate: '2026-05-20',
-    description: '市属5家公立医院医疗设备集中采购',
-    attachments: [],
+    id: 'P007', name: '公立医院医疗设备集中采购', code: 'CG-2026-025',
+    type: 'procurement', budget: 18500000, purchaser: '市公立医院管理中心',
+    agency: '市政府采购中心', status: 'registered', registerDate: '2026-05-18',
+    description: '', attachments: [],
   },
   {
-    id: 'P008',
-    name: '老旧写字楼房产转让',
-    code: 'CQ-2026-008',
-    type: 'property',
-    budget: 45000000,
-    purchaser: '市国有资产监督管理委员会',
-    agency: '市产权交易中心',
-    status: 'contract',
-    registerDate: '2026-04-12',
-    description: '中心区老政务办公楼整体转让',
-    attachments: [],
+    id: 'P008', name: '老旧写字楼房产转让', code: 'CQ-2026-008',
+    type: 'property', budget: 45000000, purchaser: '市机关事务管理局',
+    agency: '市产权交易中心', status: 'completed', registerDate: '2026-03-25',
+    description: '', attachments: [],
   },
 ];
 
+const mockContracts: Contract[] = [
+  {
+    id: 'C001', projectId: 'P002', projectName: '市属医院医疗设备采购项目',
+    contractNo: 'HT-2026-025', contractAmount: 15600000,
+    partyA: '市卫生健康委员会', partyB: '市医疗器械有限公司',
+    signDate: '2026-04-10', startDate: '2026-04-15', endDate: '2026-07-15',
+    content: '', attachments: [], performanceProgress: 30, milestones: [],
+  },
+  {
+    id: 'C002', projectId: 'P003', projectName: '工业园区标准厂房产权转让',
+    contractNo: 'HT-2026-038', contractAmount: 84500000,
+    partyA: '市工业园区管委会', partyB: '市产业投资集团有限公司',
+    signDate: '2026-05-15', startDate: '2026-05-15', endDate: '2026-08-15',
+    content: '', attachments: [], performanceProgress: 25, milestones: [],
+  },
+  {
+    id: 'C003', projectId: 'P001', projectName: '市民服务中心装修工程',
+    contractNo: 'HT-2026-008', contractAmount: 24800000,
+    partyA: '市政务服务管理局', partyB: '市建筑工程有限公司',
+    signDate: '2026-02-10', startDate: '2026-02-15', endDate: '2026-08-15',
+    content: '', attachments: [], performanceProgress: 100, milestones: [],
+  },
+  {
+    id: 'C004', projectId: 'P008', projectName: '老旧写字楼房产转让',
+    contractNo: 'HT-2026-015', contractAmount: 44800000,
+    partyA: '市机关事务管理局', partyB: '市商业投资有限公司',
+    signDate: '2026-04-20', startDate: '2026-04-20', endDate: '2026-07-20',
+    content: '', attachments: [], performanceProgress: 100, milestones: [],
+  },
+];
+
+const mockAnnouncements: Announcement[] = [
+  {
+    id: 'A001', projectId: 'P006', projectName: '污水处理厂二期扩建工程',
+    title: '污水处理厂二期扩建工程招标公告', type: 'bidding',
+    content: '', submitTime: '2026-05-10 09:30:00', status: 'pending', reviewer: '',
+  },
+  {
+    id: 'A002', projectId: 'P004', projectName: '城市道路绿化提升工程',
+    title: '城市道路绿化提升工程中标公告', type: 'result',
+    content: '', submitTime: '2026-05-05 14:20:00', status: 'approved', reviewer: '张三',
+    reviewTime: '2026-05-06 10:00:00', reviewOpinion: '公告内容符合要求，同意发布',
+  },
+  {
+    id: 'A003', projectId: 'P005', projectName: '智慧校园信息化建设项目',
+    title: '智慧校园信息化建设项目澄清公告', type: 'clarification',
+    content: '', submitTime: '2026-05-15 16:45:00', status: 'approved', reviewer: '李四',
+    reviewTime: '2026-05-16 09:15:00', reviewOpinion: '澄清内容合规，同意发布',
+  },
+  {
+    id: 'A004', projectId: 'P007', projectName: '公立医院医疗设备集中采购',
+    title: '公立医院医疗设备集中采购招标公告', type: 'bidding',
+    content: '', submitTime: '2026-05-22 11:00:00', status: 'rejected', reviewer: '王五',
+    reviewTime: '2026-05-23 15:30:00', reviewOpinion: '资格条件中存在限制性条款，建议修改',
+  },
+  {
+    id: 'A005', projectId: 'P008', projectName: '老旧写字楼房产转让',
+    title: '老旧写字楼房产转让公告', type: 'bidding',
+    content: '', submitTime: '2026-04-10 10:00:00', status: 'approved', reviewer: '赵六',
+    reviewTime: '2026-04-11 14:00:00', reviewOpinion: '材料齐全，程序合规，同意发布',
+  },
+];
+
+const mockClues: Clue[] = [
+  {
+    id: 'CL001', projectId: 'P004', projectName: '城市道路绿化提升工程',
+    title: '多家投标单位报价异常接近', description: '5家投标单位报价差异不足1%，涉嫌围标串标',
+    source: 'system', riskLevel: 'high', status: 'processing',
+    relatedCompanies: ['A公司', 'B公司', 'C公司', 'D公司', 'E公司'],
+    createTime: '2026-05-12 10:30:00',
+  },
+  {
+    id: 'CL002', projectId: 'P002', projectName: '市属医院医疗设备采购项目',
+    title: '投标单位负责人关系异常', description: '系统检测到两家投标单位法人为夫妻关系',
+    source: 'system', riskLevel: 'high', status: 'pending',
+    relatedCompanies: ['甲公司', '乙公司'],
+    createTime: '2026-05-08 14:20:00',
+  },
+  {
+    id: 'CL003', title: '代理机构人员违规接触投标人',
+    description: '有举报称某代理机构项目负责人私下接触潜在投标人',
+    source: 'complaint', riskLevel: 'medium', status: 'closed',
+    relatedCompanies: [],
+    createTime: '2026-04-25 09:15:00',
+    handler: '李监管', handleTime: '2026-05-05 16:00:00',
+    handleResult: '经核查，情况不属实，予以结案',
+  },
+  {
+    id: 'CL004', projectId: 'P007', projectName: '公立医院医疗设备集中采购',
+    title: '技术参数指向特定品牌', description: '招标文件中多项技术参数仅有某品牌满足',
+    source: 'manual', riskLevel: 'medium', status: 'pending',
+    relatedCompanies: [],
+    createTime: '2026-05-25 11:00:00',
+  },
+];
+
+const mockComplaints: Complaint[] = [
+  {
+    id: 'CP001', projectId: 'P004', projectName: '城市道路绿化提升工程',
+    title: '中标单位业绩造假', content: '投诉人称中标单位提供的类似项目业绩存在造假',
+    complainant: '某园林绿化公司', contact: '138****8888',
+    submitTime: '2026-05-08 09:00:00', status: 'processing',
+    handler: '张监管',
+  },
+  {
+    id: 'CP002', projectId: 'P002', projectName: '市属医院医疗设备采购项目',
+    title: '评标过程不公正', content: '投诉人称评标专家存在倾向性打分',
+    complainant: '某医疗设备公司', contact: '139****9999',
+    submitTime: '2026-05-15 14:30:00', status: 'pending',
+  },
+  {
+    id: 'CP003', projectId: 'P001', projectName: '市民服务中心装修工程',
+    title: '工程量计算有误', content: '投诉人称结算工程量与实际不符',
+    complainant: '某装修公司', contact: '137****7777',
+    submitTime: '2026-03-20 10:00:00', status: 'replied',
+    handler: '王监管', replyContent: '已委托第三方造价机构复核，工程量计算无误',
+    replyTime: '2026-04-02 15:00:00',
+  },
+  {
+    id: 'CP004', title: '交易平台系统故障', content: '开标当日系统频繁掉线，影响正常投标',
+    projectId: '', projectName: '',
+    complainant: '匿名', contact: '',
+    submitTime: '2026-04-10 16:00:00', status: 'closed',
+    handler: '技术部门',
+    replyContent: '已排查系统故障原因，优化了服务器配置',
+    replyTime: '2026-04-15 10:00:00',
+  },
+];
+
+type DrillDownType = 'projects' | 'contracts' | 'clues' | 'complaints' | 'announcements' | null;
+
 const Statistics: React.FC = () => {
-  const [projects] = useState<Project[]>(initialProjects);
-  const [reportType, setReportType] = useState<'project' | 'amount' | 'area'>('project');
   const [projectTypeFilter, setProjectTypeFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
-
-  const getOptionLabel = (options: Array<{ value: string; label: string }>, value: string) => {
-    return options.find((opt) => opt.value === value)?.label || value;
-  };
+  const [drillDownType, setDrillDownType] = useState<DrillDownType>(null);
+  const [drillDownTitle, setDrillDownTitle] = useState<string>('');
 
   const filteredProjects = useMemo(() => {
-    return projects.filter((p) => {
+    return mockProjects.filter((p) => {
       const matchType = projectTypeFilter === 'all' || p.type === projectTypeFilter;
       let matchDate = true;
       if (dateRange && dateRange[0] && dateRange[1]) {
-        const projectDate = dayjs(p.registerDate);
-        matchDate = projectDate.isAfter(dateRange[0]) && projectDate.isBefore(dateRange[1]);
+        const registerDate = dayjs(p.registerDate);
+        matchDate = registerDate.isAfter(dateRange[0]) && registerDate.isBefore(dateRange[1]);
       }
       return matchType && matchDate;
     });
-  }, [projects, projectTypeFilter, dateRange]);
+  }, [projectTypeFilter, dateRange]);
 
-  const filteredStats = useMemo(() => {
+  const filteredContracts = useMemo(() => {
+    return mockContracts.filter((c) => {
+      const project = mockProjects.find((p) => p.id === c.projectId);
+      const matchType = !project || projectTypeFilter === 'all' || project.type === projectTypeFilter;
+      let matchDate = true;
+      if (dateRange && dateRange[0] && dateRange[1]) {
+        const signDate = dayjs(c.signDate);
+        matchDate = signDate.isAfter(dateRange[0]) && signDate.isBefore(dateRange[1]);
+      }
+      return matchType && matchDate;
+    });
+  }, [projectTypeFilter, dateRange]);
+
+  const filteredAnnouncements = useMemo(() => {
+    return mockAnnouncements.filter((a) => {
+      let matchDate = true;
+      if (dateRange && dateRange[0] && dateRange[1]) {
+        const submitTime = dayjs(a.submitTime);
+        matchDate = submitTime.isAfter(dateRange[0]) && submitTime.isBefore(dateRange[1]);
+      }
+      return matchDate;
+    });
+  }, [dateRange]);
+
+  const filteredClues = useMemo(() => {
+    return mockClues.filter((c) => {
+      let matchDate = true;
+      if (dateRange && dateRange[0] && dateRange[1]) {
+        const createTime = dayjs(c.createTime);
+        matchDate = createTime.isAfter(dateRange[0]) && createTime.isBefore(dateRange[1]);
+      }
+      return matchDate;
+    });
+  }, [dateRange]);
+
+  const filteredComplaints = useMemo(() => {
+    return mockComplaints.filter((c) => {
+      let matchDate = true;
+      if (dateRange && dateRange[0] && dateRange[1]) {
+        const submitTime = dayjs(c.submitTime);
+        matchDate = submitTime.isAfter(dateRange[0]) && submitTime.isBefore(dateRange[1]);
+      }
+      return matchDate;
+    });
+  }, [dateRange]);
+
+  const stats = useMemo(() => {
     const totalAmount = filteredProjects.reduce((sum, p) => sum + p.budget, 0);
     const completedCount = filteredProjects.filter((p) => p.status === 'completed').length;
     return {
-      totalCount: filteredProjects.length,
+      totalProjects: filteredProjects.length,
       totalAmount,
-      completedCount,
+      completedProjects: completedCount,
       completionRate: filteredProjects.length > 0 ? Math.round((completedCount / filteredProjects.length) * 100) : 0,
+      clueCount: filteredClues.length,
+      pendingClues: filteredClues.filter((c) => c.status === 'pending').length,
+      complaintCount: filteredComplaints.length,
+      pendingComplaints: filteredComplaints.filter((c) => c.status === 'pending').length,
+      contractCount: filteredContracts.length,
+      contractAmount: filteredContracts.reduce((sum, c) => sum + c.contractAmount, 0),
+    };
+  }, [filteredProjects, filteredClues, filteredComplaints, filteredContracts]);
+
+  const projectTypeChartOption = useMemo(() => {
+    const statsByType = PROJECT_TYPE_OPTIONS.map((type) => {
+      const count = filteredProjects.filter((p) => p.type === type.value).length;
+      const amount = filteredProjects
+        .filter((p) => p.type === type.value)
+        .reduce((sum, p) => sum + p.budget, 0);
+      return { name: type.label, count, amount: amount / 10000 };
+    });
+    return {
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { data: ['项目数', '交易金额(万元)'] },
+      xAxis: { type: 'category', data: statsByType.map((d) => d.name) },
+      yAxis: [{ type: 'value', name: '项目数' }, { type: 'value', name: '金额(万元)' }],
+      series: [
+        { name: '项目数', type: 'bar', data: statsByType.map((d) => d.count) },
+        { name: '交易金额(万元)', type: 'bar', yAxisIndex: 1, data: statsByType.map((d) => d.amount) },
+      ],
     };
   }, [filteredProjects]);
 
-  const monthlyTrendOption = {
-    tooltip: {
-      trigger: 'axis',
-    },
-    legend: {
-      data: ['项目数量', '交易金额'],
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true,
-    },
-    xAxis: {
-      type: 'category',
-      data: mockStatisticsData.monthlyTrend.map((item) => item.month),
-    },
-    yAxis: [
-      {
-        type: 'value',
-        name: '项目数',
-      },
-      {
-        type: 'value',
-        name: '金额(万元)',
-      },
-    ],
-    series: [
-      {
-        name: '项目数量',
-        type: 'bar',
-        data: mockStatisticsData.monthlyTrend.map((item) => item.count),
-        itemStyle: {
-          color: '#165DFF',
+  const monthlyTrendOption = useMemo(() => {
+    const months = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06'];
+    return {
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['项目数', '交易额(万元)'] },
+      xAxis: { type: 'category', boundaryGap: false, data: months },
+      yAxis: [{ type: 'value', name: '项目数' }, { type: 'value', name: '金额(万元)' }],
+      series: [
+        {
+          name: '项目数',
+          type: 'line',
+          smooth: true,
+          data: [1, 1, 2, 2, 2, 0],
         },
-      },
-      {
-        name: '交易金额',
-        type: 'line',
-        yAxisIndex: 1,
-        smooth: true,
-        data: mockStatisticsData.monthlyTrend.map((item) => item.amount / 10000),
-        itemStyle: {
-          color: '#00B42A',
+        {
+          name: '交易额(万元)',
+          type: 'line',
+          smooth: true,
+          yAxisIndex: 1,
+          data: [2500, 1580, 13000, 6380, 6330, 0],
         },
-        areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(0, 180, 42, 0.3)' },
-              { offset: 1, color: 'rgba(0, 180, 42, 0.05)' },
-            ],
-          },
-        },
-      },
-    ],
+      ],
+    };
+  }, []);
+
+  const handleDrillDown = (type: DrillDownType, title: string) => {
+    setDrillDownType(type);
+    setDrillDownTitle(title);
   };
 
-  const projectTypePieOption = {
-    tooltip: {
-      trigger: 'item',
-      formatter: '{b}: {c}个 ({d}%)',
-    },
-    legend: {
-      bottom: '0',
-      left: 'center',
-    },
-    series: [
-      {
-        name: '项目类型',
-        type: 'pie',
-        radius: ['40%', '70%'],
-        center: ['50%', '45%'],
-        avoidLabelOverlap: false,
-        itemStyle: {
-          borderRadius: 8,
-          borderColor: '#fff',
-          borderWidth: 2,
-        },
-        label: {
-          show: true,
-          formatter: '{b}\n{d}%',
-        },
-        data: mockStatisticsData.projectTypeStats.map((item, index) => ({
-          value: item.count,
-          name: item.type,
-          itemStyle: {
-            color: ['#165DFF', '#00B42A', '#FF7D00'][index],
-          },
-        })),
-      },
-    ],
-  };
-
-  const amountTypePieOption = {
-    tooltip: {
-      trigger: 'item',
-      formatter: '{b}: {c}万元 ({d}%)',
-    },
-    legend: {
-      bottom: '0',
-      left: 'center',
-    },
-    series: [
-      {
-        name: '交易金额',
-        type: 'pie',
-        radius: ['40%', '70%'],
-        center: ['50%', '45%'],
-        avoidLabelOverlap: false,
-        itemStyle: {
-          borderRadius: 8,
-          borderColor: '#fff',
-          borderWidth: 2,
-        },
-        label: {
-          show: true,
-          formatter: '{b}\n{d}%',
-        },
-        data: mockStatisticsData.projectTypeStats.map((item, index) => ({
-          value: item.amount / 10000,
-          name: item.type,
-          itemStyle: {
-            color: ['#165DFF', '#00B42A', '#FF7D00'][index],
-          },
-        })),
-      },
-    ],
-  };
-
-  const areaBarOption = {
-    tooltip: {
-      trigger: 'axis',
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true,
-    },
-    xAxis: {
-      type: 'category',
-      data: mockStatisticsData.areaStats.map((item) => item.area),
-    },
-    yAxis: {
-      type: 'value',
-      name: '项目数',
-    },
-    series: [
-      {
-        name: '项目数量',
-        type: 'bar',
-        barWidth: '50%',
-        data: mockStatisticsData.areaStats.map((item) => item.count),
-        itemStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: '#165DFF' },
-              { offset: 1, color: '#4080FF' },
-            ],
-          },
-          borderRadius: [4, 4, 0, 0],
-        },
-      },
-    ],
-  };
-
-  const columns: ColumnsType<Project> = [
-    {
-      title: '项目编号',
-      dataIndex: 'code',
-      key: 'code',
-      width: 140,
-    },
-    {
-      title: '项目名称',
-      dataIndex: 'name',
-      key: 'name',
-      ellipsis: true,
-    },
-    {
-      title: '项目类型',
-      dataIndex: 'type',
-      key: 'type',
-      width: 120,
-      render: (type) => getOptionLabel(PROJECT_TYPE_OPTIONS, type),
-    },
-    {
-      title: '预算金额',
-      dataIndex: 'budget',
-      key: 'budget',
-      width: 120,
-      render: (budget) => formatMoney(budget),
-    },
-    {
-      title: '采购人',
-      dataIndex: 'purchaser',
-      key: 'purchaser',
-      width: 150,
-    },
-    {
-      title: '项目状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      render: (status) => {
-        const label = getOptionLabel(PROJECT_STATUS_OPTIONS, status);
-        const colors: Record<string, string> = {
-          registered: 'blue',
-          announced: 'cyan',
-          bidding: 'orange',
-          evaluating: 'purple',
-          completed: 'green',
-          contract: 'geekblue',
-          performing: 'gold',
-        };
-        return <Tag color={colors[status]}>{label}</Tag>;
-      },
-    },
-    {
-      title: '登记日期',
-      dataIndex: 'registerDate',
-      key: 'registerDate',
-      width: 120,
-      render: (date) => formatDate(date),
-    },
-  ];
-
-  const exportToCSV = (data: any[], filename: string, headers: string[], keys: string[]) => {
+  const exportToCSV = (
+    data: any[],
+    filename: string,
+    headers: string[],
+    keys: string[],
+    formatters?: Record<string, (value: any) => string>
+  ) => {
     const csvContent = [
       headers.join(','),
-      ...data.map((item) =>
-        keys.map((key) => {
-          let value = item[key];
-          if (typeof value === 'string' && value.includes(',')) {
-            value = `"${value}"`;
-          }
-          return value || '';
-        }).join(',')
+      ...data.map((row) =>
+        keys
+          .map((key) => {
+            let value = row[key];
+            if (formatters && formatters[key]) {
+              value = formatters[key](value);
+            }
+            if (typeof value === 'string' && value.includes(',')) {
+              value = `"${value}"`;
+            }
+            return value ?? '';
+          })
+          .join(',')
       ),
     ].join('\n');
 
     const BOM = '\uFEFF';
     const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${filename}_${formatDateTime(new Date().toISOString()).replace(/[- :]/g, '')}.csv`);
-    link.style.visibility = 'hidden';
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${filename}_${dayjs().format('YYYYMMDD_HHmmss')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const handleExportProjects = () => {
-    const headers = ['项目编号', '项目名称', '项目类型', '预算金额', '采购人', '项目状态', '登记日期', '代理机构', '项目描述'];
-    const keys = ['code', 'name', 'typeText', 'budgetText', 'purchaser', 'statusText', 'registerDate', 'agency', 'description'];
-    const data = filteredProjects.map((p) => ({
-      ...p,
-      typeText: getOptionLabel(PROJECT_TYPE_OPTIONS, p.type),
-      budgetText: formatMoney(p.budget),
-      statusText: getOptionLabel(PROJECT_STATUS_OPTIONS, p.status),
-    }));
-    exportToCSV(data, '项目明细报表', headers, keys);
-    message.success('项目明细导出成功');
-  };
-
-  const handleExportStatistics = () => {
-    const statsData = [
-      { item: '总项目数', value: filteredStats.totalCount, unit: '个' },
-      { item: '总交易额', value: formatMoney(filteredStats.totalAmount), unit: '' },
-      { item: '已完成项目', value: filteredStats.completedCount, unit: '个' },
-      { item: '完成率', value: `${filteredStats.completionRate}%`, unit: '' },
-      { item: '异常线索数', value: mockStatisticsData.clueCount, unit: '条' },
-      { item: '异议投诉数', value: mockStatisticsData.complaintCount, unit: '件' },
-      { item: '黑名单企业数', value: mockStatisticsData.blacklistCount, unit: '家' },
-    ];
-    const headers = ['统计项', '数值', '单位'];
-    const keys = ['item', 'value', 'unit'];
-    exportToCSV(statsData, '统计概览报表', headers, keys);
-    message.success('统计概览导出成功');
-  };
-
-  const handleExportClues = () => {
-    const headers = ['线索编号', '线索标题', '风险等级', '线索来源', '关联项目', '状态', '创建时间'];
-    const keys = ['id', 'title', 'riskLevelText', 'sourceText', 'projectName', 'statusText', 'createTime'];
-    const data = mockClues.map((c) => ({
-      ...c,
-      riskLevelText: c.riskLevel === 'high' ? '高风险' : c.riskLevel === 'medium' ? '中风险' : '低风险',
-      sourceText: c.source === 'system' ? '系统发现' : c.source === 'manual' ? '人工标记' : '投诉举报',
-      statusText: c.status === 'pending' ? '待处理' : c.status === 'processing' ? '处理中' : '已办结',
-    }));
-    exportToCSV(data, '异常线索报表', headers, keys);
-    message.success('异常线索导出成功');
-  };
-
-  const handleExportComplaints = () => {
-    const headers = ['投诉编号', '投诉标题', '关联项目', '投诉人', '联系方式', '状态', '提交时间'];
-    const keys = ['id', 'title', 'projectName', 'complainant', 'contact', 'statusText', 'submitTime'];
-    const data = mockComplaints.map((c) => ({
-      ...c,
-      statusText: c.status === 'pending' ? '待受理' : c.status === 'processing' ? '处理中' : c.status === 'replied' ? '已回复' : '已办结',
-    }));
-    exportToCSV(data, '异议投诉报表', headers, keys);
-    message.success('异议投诉导出成功');
+    URL.revokeObjectURL(url);
+    message.success('导出成功');
   };
 
   const exportMenuItems: MenuProps['items'] = [
     {
       key: 'projects',
-      label: (
-        <span onClick={handleExportProjects}>
-          <FileExcelOutlined className="mr-2" /> 项目明细报表
-        </span>
-      ),
+      label: '项目明细报表',
+      icon: <FileText size={14} />,
+      onClick: () => {
+        exportToCSV(
+          filteredProjects,
+          '项目明细报表',
+          ['项目编号', '项目名称', '交易类型', '预算金额', '采购人', '登记日期', '状态'],
+          ['code', 'name', 'type', 'budget', 'purchaser', 'registerDate', 'status'],
+          {
+            type: (v) => PROJECT_TYPE_OPTIONS.find((o) => o.value === v)?.label || v,
+            budget: (v) => formatMoney(v),
+            status: (v) => PROJECT_STATUS_OPTIONS.find((o) => o.value === v)?.label || v,
+          }
+        );
+      },
     },
     {
-      key: 'statistics',
-      label: (
-        <span onClick={handleExportStatistics}>
-          <FileTextOutlined className="mr-2" /> 统计概览报表
-        </span>
-      ),
+      key: 'contracts',
+      label: '合同明细报表',
+      icon: <HandshakeIcon size={14} />,
+      onClick: () => {
+        exportToCSV(
+          filteredContracts,
+          '合同明细报表',
+          ['合同编号', '项目名称', '合同金额', '甲方', '乙方', '签订日期', '履约进度'],
+          ['contractNo', 'projectName', 'contractAmount', 'partyA', 'partyB', 'signDate', 'performanceProgress'],
+          {
+            contractAmount: (v) => formatMoney(v),
+            performanceProgress: (v) => `${v}%`,
+          }
+        );
+      },
+    },
+    {
+      key: 'announcements',
+      label: '公告审核记录',
+      icon: <ClipboardCheck size={14} />,
+      onClick: () => {
+        exportToCSV(
+          filteredAnnouncements,
+          '公告审核记录',
+          ['公告标题', '项目名称', '公告类型', '提交时间', '状态', '审核人', '审核时间'],
+          ['title', 'projectName', 'type', 'submitTime', 'status', 'reviewer', 'reviewTime'],
+          {
+            type: (v) => ANNOUNCEMENT_TYPE_OPTIONS.find((o) => o.value === v)?.label || v,
+            status: (v) => ANNOUNCEMENT_STATUS_OPTIONS.find((o) => o.value === v)?.label || v,
+          }
+        );
+      },
     },
     {
       key: 'clues',
-      label: (
-        <span onClick={handleExportClues}>
-          <FileExcelOutlined className="mr-2" /> 异常线索报表
-        </span>
-      ),
+      label: '异常线索报表',
+      icon: <AlertTriangle size={14} />,
+      onClick: () => {
+        exportToCSV(
+          filteredClues,
+          '异常线索报表',
+          ['线索标题', '关联项目', '来源', '风险等级', '状态', '创建时间', '处理人'],
+          ['title', 'projectName', 'source', 'riskLevel', 'status', 'createTime', 'handler'],
+          {
+            source: (v) => CLUE_SOURCE_OPTIONS.find((o) => o.value === v)?.label || v,
+            riskLevel: (v) => RISK_LEVEL_OPTIONS.find((o) => o.value === v)?.label || v,
+          }
+        );
+      },
     },
     {
       key: 'complaints',
-      label: (
-        <span onClick={handleExportComplaints}>
-          <FileExcelOutlined className="mr-2" /> 异议投诉报表
-        </span>
-      ),
+      label: '异议投诉报表',
+      icon: <MessageSquare size={14} />,
+      onClick: () => {
+        exportToCSV(
+          filteredComplaints,
+          '异议投诉报表',
+          ['投诉标题', '关联项目', '投诉人', '提交时间', '状态', '处理人'],
+          ['title', 'projectName', 'complainant', 'submitTime', 'status', 'handler'],
+          {
+            status: (v) => COMPLAINT_STATUS_OPTIONS.find((o) => o.value === v)?.label || v,
+          }
+        );
+      },
+    },
+    {
+      key: 'performance',
+      label: '履约进度报表',
+      icon: <ProgressIcon size={14} />,
+      onClick: () => {
+        const performanceData = filteredContracts.flatMap((c) =>
+          c.milestones.map((m) => ({
+            contractNo: c.contractNo,
+            projectName: c.projectName,
+            milestoneName: m.name,
+            planDate: m.planDate,
+            actualDate: m.actualDate || '-',
+            status: m.status,
+          }))
+        );
+        exportToCSV(
+          performanceData.length > 0 ? performanceData : filteredContracts.map((c) => ({
+            contractNo: c.contractNo,
+            projectName: c.projectName,
+            progress: c.performanceProgress,
+            milestoneCount: c.milestones.length,
+          })),
+          '履约进度报表',
+          performanceData.length > 0
+            ? ['合同编号', '项目名称', '里程碑名称', '计划日期', '实际日期', '状态']
+            : ['合同编号', '项目名称', '履约进度', '里程碑总数'],
+          performanceData.length > 0
+            ? ['contractNo', 'projectName', 'milestoneName', 'planDate', 'actualDate', 'status']
+            : ['contractNo', 'projectName', 'progress', 'milestoneCount'],
+          performanceData.length > 0
+            ? {
+                status: (v) => MILESTONE_STATUS_OPTIONS.find((o) => o.value === v)?.label || v,
+              }
+            : {
+                progress: (v) => `${v}%`,
+              }
+        );
+      },
     },
   ];
+
+  const renderDrillDownTable = () => {
+    if (drillDownType === 'projects') {
+      const columns: ColumnsType<Project> = [
+        { title: '项目编号', dataIndex: 'code', width: 120 },
+        { title: '项目名称', dataIndex: 'name', ellipsis: true },
+        { title: '类型', dataIndex: 'type', width: 100, render: (v) => PROJECT_TYPE_OPTIONS.find((o) => o.value === v)?.label },
+        { title: '预算金额', dataIndex: 'budget', width: 120, render: (v) => formatMoney(v) },
+        { title: '采购人', dataIndex: 'purchaser', width: 160 },
+        { title: '登记日期', dataIndex: 'registerDate', width: 110, render: (v) => formatDate(v) },
+        { title: '状态', dataIndex: 'status', width: 100, render: (v) => PROJECT_STATUS_OPTIONS.find((o) => o.value === v)?.label },
+      ];
+      return <Table columns={columns} dataSource={filteredProjects} rowKey="id" pagination={{ pageSize: 10 }} />;
+    }
+
+    if (drillDownType === 'contracts') {
+      const columns: ColumnsType<Contract> = [
+        { title: '合同编号', dataIndex: 'contractNo', width: 120 },
+        { title: '项目名称', dataIndex: 'projectName', ellipsis: true },
+        { title: '合同金额', dataIndex: 'contractAmount', width: 120, render: (v) => formatMoney(v) },
+        { title: '甲方', dataIndex: 'partyA', width: 150 },
+        { title: '乙方', dataIndex: 'partyB', width: 150 },
+        { title: '签订日期', dataIndex: 'signDate', width: 110, render: (v) => formatDate(v) },
+        { title: '履约进度', dataIndex: 'performanceProgress', width: 100, render: (v) => `${v}%` },
+      ];
+      return <Table columns={columns} dataSource={filteredContracts} rowKey="id" pagination={{ pageSize: 10 }} />;
+    }
+
+    if (drillDownType === 'announcements') {
+      const columns: ColumnsType<Announcement> = [
+        { title: '公告标题', dataIndex: 'title', ellipsis: true },
+        { title: '项目名称', dataIndex: 'projectName', width: 180, ellipsis: true },
+        { title: '类型', dataIndex: 'type', width: 100, render: (v) => ANNOUNCEMENT_TYPE_OPTIONS.find((o) => o.value === v)?.label },
+        { title: '提交时间', dataIndex: 'submitTime', width: 160, render: (v) => formatDateTime(v) },
+        { title: '状态', dataIndex: 'status', width: 100, render: (v) => ANNOUNCEMENT_STATUS_OPTIONS.find((o) => o.value === v)?.label },
+        { title: '审核人', dataIndex: 'reviewer', width: 100, render: (v) => v || '-' },
+      ];
+      return <Table columns={columns} dataSource={filteredAnnouncements} rowKey="id" pagination={{ pageSize: 10 }} />;
+    }
+
+    if (drillDownType === 'clues') {
+      const columns: ColumnsType<Clue> = [
+        { title: '线索标题', dataIndex: 'title', ellipsis: true },
+        { title: '关联项目', dataIndex: 'projectName', width: 180, ellipsis: true, render: (v) => v || '-' },
+        { title: '来源', dataIndex: 'source', width: 100, render: (v) => CLUE_SOURCE_OPTIONS.find((o) => o.value === v)?.label },
+        { title: '风险等级', dataIndex: 'riskLevel', width: 100, render: (v) => RISK_LEVEL_OPTIONS.find((o) => o.value === v)?.label },
+        { title: '状态', dataIndex: 'status', width: 100, render: (v) => {
+          const opt = CLUE_SOURCE_OPTIONS.find((o) => o.value === v);
+          return opt ? <Tag color={opt.color}>{opt.label}</Tag> : v;
+        } },
+        { title: '创建时间', dataIndex: 'createTime', width: 160, render: (v) => formatDateTime(v) },
+      ];
+      return <Table columns={columns} dataSource={filteredClues} rowKey="id" pagination={{ pageSize: 10 }} />;
+    }
+
+    if (drillDownType === 'complaints') {
+      const columns: ColumnsType<Complaint> = [
+        { title: '投诉标题', dataIndex: 'title', ellipsis: true },
+        { title: '关联项目', dataIndex: 'projectName', width: 180, ellipsis: true, render: (v) => v || '-' },
+        { title: '投诉人', dataIndex: 'complainant', width: 120 },
+        { title: '提交时间', dataIndex: 'submitTime', width: 160, render: (v) => formatDateTime(v) },
+        { title: '状态', dataIndex: 'status', width: 100, render: (v) => COMPLAINT_STATUS_OPTIONS.find((o) => o.value === v)?.label },
+        { title: '处理人', dataIndex: 'handler', width: 100, render: (v) => v || '-' },
+      ];
+      return <Table columns={columns} dataSource={filteredComplaints} rowKey="id" pagination={{ pageSize: 10 }} />;
+    }
+
+    return null;
+  };
 
   return (
     <div className="space-y-6">
       <Card className="shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <Space>
-              <span className="text-gray-600">统计周期：</span>
-              <RangePicker value={dateRange} onChange={(dates) => setDateRange(dates as any)} />
-            </Space>
+        <Row gutter={[16, 16]} align="middle">
+          <Col>
             <Space>
               <span className="text-gray-600">项目类型：</span>
               <Select
                 defaultValue="all"
                 style={{ width: 140 }}
-                value={projectTypeFilter}
                 onChange={(value) => setProjectTypeFilter(value)}
+                value={projectTypeFilter}
               >
                 <Option value="all">全部类型</Option>
-                <Option value="engineering">工程招投标</Option>
-                <Option value="procurement">政府采购</Option>
-                <Option value="property">产权交易</Option>
+                {PROJECT_TYPE_OPTIONS.map((option) => (
+                  <Option key={option.value} value={option.value}>
+                    {option.label}
+                  </Option>
+                ))}
               </Select>
+              <span className="text-gray-600">日期范围：</span>
+              <RangePicker
+                onChange={(dates) => setDateRange(dates as [dayjs.Dayjs | null, dayjs.Dayjs | null] | null)}
+              />
             </Space>
-          </div>
-          <Dropdown menu={{ items: exportMenuItems }} placement="bottomRight">
-            <Button type="primary" icon={<DownloadOutlined />}>
-              导出报表
-            </Button>
-          </Dropdown>
-        </div>
+          </Col>
+          <Col flex="auto" />
+          <Col>
+            <Dropdown menu={{ items: exportMenuItems }} placement="bottomRight">
+              <Button type="primary" icon={<Download size={16} />}>
+                导出报表
+              </Button>
+            </Dropdown>
+          </Col>
+        </Row>
       </Card>
 
       <Row gutter={[16, 16]}>
-        <Col xs={24} lg={16}>
+        <Col xs={24} sm={12} md={6}>
           <Card
-            title="月度交易趋势"
-            className="shadow-sm"
-            extra={
-              <Space>
-                <Button
-                  type={reportType === 'project' ? 'primary' : 'default'}
-                  size="small"
-                  icon={<BarChartOutlined />}
-                  onClick={() => setReportType('project')}
-                >
-                  项目数
-                </Button>
-                <Button
-                  type={reportType === 'amount' ? 'primary' : 'default'}
-                  size="small"
-                  icon={<LineChartOutlined />}
-                  onClick={() => setReportType('amount')}
-                >
-                  交易额
-                </Button>
-              </Space>
-            }
+            className="shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => handleDrillDown('projects', '项目明细')}
           >
-            <ReactECharts option={monthlyTrendOption} style={{ height: 350 }} />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-500 text-sm">总项目数</p>
+                <p className="text-3xl font-bold text-primary-600 mt-1">{stats.totalProjects}</p>
+                <p className="text-xs text-green-600 mt-2">较上月 +12.5%</p>
+              </div>
+              <div className="p-3 bg-primary-50 rounded-full">
+                <BarChart3 size={28} className="text-primary-500" />
+              </div>
+            </div>
           </Card>
         </Col>
-        <Col xs={24} lg={8}>
+        <Col xs={24} sm={12} md={6}>
           <Card
-            title="交易类型分布"
-            className="shadow-sm"
-            extra={
-              <Space>
-                <Button
-                  type={reportType === 'project' ? 'primary' : 'default'}
-                  size="small"
-                  icon={<PieChartOutlined />}
-                  onClick={() => setReportType('project')}
-                >
-                  按数量
-                </Button>
-                <Button
-                  type={reportType === 'area' ? 'primary' : 'default'}
-                  size="small"
-                  icon={<PieChartOutlined />}
-                  onClick={() => setReportType('area')}
-                >
-                  按金额
-                </Button>
-              </Space>
-            }
+            className="shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => handleDrillDown('contracts', '合同明细')}
           >
-            <ReactECharts
-              option={reportType === 'area' ? amountTypePieOption : projectTypePieOption}
-              style={{ height: 350 }}
-            />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-500 text-sm">总交易额</p>
+                <p className="text-3xl font-bold text-green-600 mt-1">{(stats.totalAmount / 100000000).toFixed(2)}亿</p>
+                <p className="text-xs text-green-600 mt-2">较上月 +8.3%</p>
+              </div>
+              <div className="p-3 bg-green-50 rounded-full">
+                <TrendingUp size={28} className="text-green-500" />
+              </div>
+            </div>
           </Card>
         </Col>
-      </Row>
-
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
-          <Card title="各区域项目分布" className="shadow-sm">
-            <ReactECharts option={areaBarOption} style={{ height: 300 }} />
+        <Col xs={24} sm={12} md={6}>
+          <Card
+            className="shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => handleDrillDown('clues', '异常线索明细')}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-500 text-sm">异常线索</p>
+                <p className="text-3xl font-bold text-orange-600 mt-1">{stats.clueCount}</p>
+                <p className="text-xs text-orange-600 mt-2">待处理 {stats.pendingClues} 条</p>
+              </div>
+              <div className="p-3 bg-orange-50 rounded-full">
+                <AlertTriangle size={28} className="text-orange-500" />
+              </div>
+            </div>
           </Card>
         </Col>
-        <Col xs={24} lg={12}>
-          <Card title="统计概览" className="shadow-sm">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">总项目数</p>
-                <p className="text-2xl font-bold text-blue-600">{filteredStats.totalCount}</p>
-                <p className="text-xs text-gray-500 mt-1">较上月 +12.5%</p>
+        <Col xs={24} sm={12} md={6}>
+          <Card
+            className="shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => handleDrillDown('complaints', '异议投诉明细')}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-500 text-sm">异议投诉</p>
+                <p className="text-3xl font-bold text-red-600 mt-1">{stats.complaintCount}</p>
+                <p className="text-xs text-red-600 mt-2">待处理 {stats.pendingComplaints} 条</p>
               </div>
-              <div className="p-4 bg-green-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">总交易额</p>
-                <p className="text-2xl font-bold text-green-600">{formatMoney(filteredStats.totalAmount)}</p>
-                <p className="text-xs text-gray-500 mt-1">较上月 +8.3%</p>
-              </div>
-              <div className="p-4 bg-orange-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">已完成项目</p>
-                <p className="text-2xl font-bold text-orange-600">{filteredStats.completedCount}</p>
-                <p className="text-xs text-gray-500 mt-1">完成率 {filteredStats.completionRate}%</p>
-              </div>
-              <div className="p-4 bg-red-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">异常线索</p>
-                <p className="text-2xl font-bold text-red-600">{mockStatisticsData.clueCount}</p>
-                <p className="text-xs text-gray-500 mt-1">待处理 8 条</p>
+              <div className="p-3 bg-red-50 rounded-full">
+                <MessageSquare size={28} className="text-red-500" />
               </div>
             </div>
           </Card>
         </Col>
       </Row>
 
-      <Card
-        title="项目明细列表"
-        className="shadow-sm"
-        extra={
-          <Button icon={<DownloadOutlined />} size="small" onClick={handleExportProjects}>
-            导出Excel
-          </Button>
-        }
-      >
-        <Table
-          columns={columns}
-          dataSource={filteredProjects}
-          rowKey="id"
-          pagination={{
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
-            pageSize: 10,
-          }}
-          scroll={{ x: 1000 }}
-        />
+      <Row gutter={16}>
+        <Col span={12}>
+          <Card title="按交易类型统计" className="shadow-sm">
+            <ReactECharts option={projectTypeChartOption} style={{ height: 300 }} />
+          </Card>
+        </Col>
+        <Col span={12}>
+          <Card title="月度趋势" className="shadow-sm">
+            <ReactECharts option={monthlyTrendOption} style={{ height: 300 }} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Card title="快速统计" className="shadow-sm">
+        <Row gutter={16}>
+          <Col span={8}>
+            <List
+              size="small"
+              header={<div className="font-medium text-gray-700">项目完成情况</div>}
+              dataSource={[
+                { label: '已完成项目', value: stats.completedProjects },
+                { label: '完成率', value: `${stats.completionRate}%` },
+                { label: '进行中项目', value: stats.totalProjects - stats.completedProjects },
+              ]}
+              renderItem={(item) => (
+                <List.Item>
+                  <span className="text-gray-600">{item.label}</span>
+                  <span className="font-medium">{item.value}</span>
+                </List.Item>
+              )}
+            />
+          </Col>
+          <Col span={8}>
+            <List
+              size="small"
+              header={<div className="font-medium text-gray-700">合同情况</div>}
+              dataSource={[
+                { label: '合同总数', value: stats.contractCount },
+                { label: '合同总金额', value: formatMoney(stats.contractAmount) },
+                { label: '平均合同额', value: formatMoney(stats.contractCount > 0 ? stats.contractAmount / stats.contractCount : 0) },
+              ]}
+              renderItem={(item) => (
+                <List.Item>
+                  <span className="text-gray-600">{item.label}</span>
+                  <span className="font-medium">{item.value}</span>
+                </List.Item>
+              )}
+            />
+          </Col>
+          <Col span={8}>
+            <List
+              size="small"
+              header={<div className="font-medium text-gray-700">审核情况</div>}
+              dataSource={[
+                { label: '公告总数', value: filteredAnnouncements.length },
+                { label: '已通过', value: filteredAnnouncements.filter((a) => a.status === 'approved').length },
+                { label: '待审核', value: filteredAnnouncements.filter((a) => a.status === 'pending').length },
+              ]}
+              renderItem={(item) => (
+                <List.Item>
+                  <span className="text-gray-600">{item.label}</span>
+                  <span className="font-medium">{item.value}</span>
+                </List.Item>
+              )}
+            />
+          </Col>
+        </Row>
       </Card>
+
+      <Modal
+        title={drillDownTitle}
+        open={drillDownType !== null}
+        onCancel={() => setDrillDownType(null)}
+        footer={null}
+        width={1200}
+      >
+        {renderDrillDownTable()}
+      </Modal>
     </div>
   );
 };

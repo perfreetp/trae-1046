@@ -16,10 +16,12 @@ import {
   Alert,
   Descriptions,
   Input as AntInput,
+  Checkbox,
+  Timeline,
 } from 'antd';
 import { Search, Eye, Check, XCircle, FileDiff, AlertTriangle } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
-import type { Announcement } from '@/types';
+import type { Announcement, ReviewRecord } from '@/types';
 import {
   ANNOUNCEMENT_TYPE_OPTIONS,
   ANNOUNCEMENT_STATUS_OPTIONS,
@@ -41,6 +43,17 @@ const initialAnnouncements: Announcement[] = [
     submitTime: '2026-05-10 09:30:00',
     status: 'pending',
     reviewer: '',
+    reviewRecords: [
+      {
+        id: 'R001',
+        announcementId: 'A001',
+        action: 'submit',
+        operator: '招标代理-小王',
+        operateTime: '2026-05-10 09:30:00',
+        result: '提交审核',
+        opinion: '公告内容已按模板编制，请审核',
+      },
+    ],
   },
   {
     id: 'A002',
@@ -54,6 +67,25 @@ const initialAnnouncements: Announcement[] = [
     reviewer: '张三',
     reviewTime: '2026-05-06 10:00:00',
     reviewOpinion: '公告内容符合要求，同意发布',
+    reviewRecords: [
+      {
+        id: 'R002',
+        announcementId: 'A002',
+        action: 'submit',
+        operator: '采购中心-小李',
+        operateTime: '2026-05-05 14:20:00',
+        result: '提交审核',
+      },
+      {
+        id: 'R003',
+        announcementId: 'A002',
+        action: 'approve',
+        operator: '张三',
+        operateTime: '2026-05-06 10:00:00',
+        result: '审核通过',
+        opinion: '公告内容符合要求，同意发布',
+      },
+    ],
   },
   {
     id: 'A003',
@@ -67,6 +99,25 @@ const initialAnnouncements: Announcement[] = [
     reviewer: '李四',
     reviewTime: '2026-05-16 09:15:00',
     reviewOpinion: '澄清内容合规，同意发布',
+    reviewRecords: [
+      {
+        id: 'R004',
+        announcementId: 'A003',
+        action: 'submit',
+        operator: '教育局-张工',
+        operateTime: '2026-05-15 16:45:00',
+        result: '提交审核',
+      },
+      {
+        id: 'R005',
+        announcementId: 'A003',
+        action: 'approve',
+        operator: '李四',
+        operateTime: '2026-05-16 09:15:00',
+        result: '审核通过',
+        opinion: '澄清内容合规，同意发布',
+      },
+    ],
   },
   {
     id: 'A004',
@@ -74,12 +125,31 @@ const initialAnnouncements: Announcement[] = [
     projectName: '公立医院医疗设备集中采购',
     title: '公立医院医疗设备集中采购招标公告',
     type: 'bidding',
-    content: '一、项目基本情况\n项目编号：CG-2026-025\n项目名称：公立医院医疗设备集中采购\n预算金额：1850万元\n采购需求：CT设备3台、MRI设备2台、DR设备5台\n\n二、申请人的资格要求\n1.满足《中华人民共和国政府采购法》第二十二条规定\n2.具有医疗器械经营许可证\n3.本项目不接受联合体投标',
+    content: '一、项目基本情况\n项目编号：CG-2026-025\n项目名称：公立医院医疗设备集中采购\n预算金额：1850万元\n采购需求：CT设备3台、MRI设备2台、DR设备5台\n\n二、申请人的资格要求\n1.满足《中华人民共和国政府采购法》第二十二条规定\n2.具有医疗器械经营许可证\n3.本项目不接受联合体投标\n4.投标企业注册资本不低于1亿元',
     submitTime: '2026-05-22 11:00:00',
     status: 'rejected',
     reviewer: '王五',
     reviewTime: '2026-05-23 15:30:00',
     reviewOpinion: '资格条件中存在限制性条款，建议修改；技术参数表述不明确，请补充',
+    reviewRecords: [
+      {
+        id: 'R006',
+        announcementId: 'A004',
+        action: 'submit',
+        operator: '卫健委-刘工',
+        operateTime: '2026-05-22 11:00:00',
+        result: '提交审核',
+      },
+      {
+        id: 'R007',
+        announcementId: 'A004',
+        action: 'reject',
+        operator: '王五',
+        operateTime: '2026-05-23 15:30:00',
+        result: '审核驳回',
+        opinion: '资格条件中存在限制性条款，建议修改；技术参数表述不明确，请补充',
+      },
+    ],
   },
   {
     id: 'A005',
@@ -87,12 +157,31 @@ const initialAnnouncements: Announcement[] = [
     projectName: '老旧写字楼房产转让',
     title: '老旧写字楼房产转让公告',
     type: 'bidding',
-    content: '经市国资委批准，现对中心区老政务办公楼整体转让进行公开挂牌。\n\n一、标的基本情况\n标的名称：中心区老政务办公楼\n坐落位置：市中心区政务路1号\n建筑面积：12000平方米\n土地性质：国有出让\n\n二、挂牌起始价：4500万元\n\n三、受让方资格条件\n1.具有独立法人资格的企业\n2.注册资本不低于5000万元\n3.具有良好的财务状况和商业信誉',
+    content: '经市国资委批准，现对中心区老政务办公楼整体转让进行公开挂牌。\n\n一、标的基本情况\n标的名称：中心区老政务办公楼\n坐落位置：市中心区政务路1号\n建筑面积：12000平方米\n土地性质：国有出让\n\n二、挂牌起始价：4500万元\n\n三、受让方资格条件\n1.具有独立法人资格的企业\n2.注册资本不低于5000万元\n3.具有良好的财务状况和商业信誉\n4.具有房地产开发经营资质',
     submitTime: '2026-04-10 10:00:00',
     status: 'approved',
     reviewer: '赵六',
     reviewTime: '2026-04-11 14:00:00',
     reviewOpinion: '材料齐全，程序合规，同意发布',
+    reviewRecords: [
+      {
+        id: 'R008',
+        announcementId: 'A005',
+        action: 'submit',
+        operator: '国资委-陈工',
+        operateTime: '2026-04-10 10:00:00',
+        result: '提交审核',
+      },
+      {
+        id: 'R009',
+        announcementId: 'A005',
+        action: 'approve',
+        operator: '赵六',
+        operateTime: '2026-04-11 14:00:00',
+        result: '审核通过',
+        opinion: '材料齐全，程序合规，同意发布',
+      },
+    ],
   },
 ];
 
@@ -101,11 +190,14 @@ const Announcements: React.FC = () => {
   const [isDetailModal, setIsDetailModal] = useState(false);
   const [isCompareModal, setIsCompareModal] = useState(false);
   const [isRejectModal, setIsRejectModal] = useState(false);
+  const [isBatchRejectModal, setIsBatchRejectModal] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [searchText, setSearchText] = useState<string>('');
   const [rejectForm] = Form.useForm();
+  const [batchRejectForm] = Form.useForm();
 
   const filteredAnnouncements = useMemo(() => {
     return announcements.filter((a) => {
@@ -118,6 +210,10 @@ const Announcements: React.FC = () => {
     });
   }, [announcements, statusFilter, typeFilter, searchText]);
 
+  const pendingCount = useMemo(() =>
+    filteredAnnouncements.filter((a) => a.status === 'pending').length
+  , [filteredAnnouncements]);
+
   const getStatusTag = (status: string) => {
     const option = ANNOUNCEMENT_STATUS_OPTIONS.find((o) => o.value === status);
     return option ? <Tag color={option.color}>{option.label}</Tag> : status;
@@ -126,6 +222,34 @@ const Announcements: React.FC = () => {
   const getTypeText = (type: string) => {
     const option = ANNOUNCEMENT_TYPE_OPTIONS.find((o) => o.value === type);
     return option ? option.label : type;
+  };
+
+  const addReviewRecord = (announcementId: string, record: Omit<ReviewRecord, 'id' | 'announcementId'>) => {
+    const newRecord: ReviewRecord = {
+      ...record,
+      id: `R${Date.now()}`,
+      announcementId,
+    };
+    setAnnouncements((prev) =>
+      prev.map((a) =>
+        a.id === announcementId
+          ? {
+              ...a,
+              reviewRecords: [...(a.reviewRecords || []), newRecord],
+            }
+          : a
+      )
+    );
+    if (selectedAnnouncement?.id === announcementId) {
+      setSelectedAnnouncement((prev) =>
+        prev
+          ? {
+              ...prev,
+              reviewRecords: [...(prev.reviewRecords || []), newRecord],
+            }
+          : null
+      );
+    }
   };
 
   const handleApprove = (record: Announcement) => {
@@ -143,6 +267,13 @@ const Announcements: React.FC = () => {
           : a
       )
     );
+    addReviewRecord(record.id, {
+      action: 'approve',
+      operator: '当前监管员',
+      operateTime: now,
+      result: '审核通过',
+      opinion: '公告内容合规，审核通过',
+    });
     if (selectedAnnouncement?.id === record.id) {
       setSelectedAnnouncement((prev) =>
         prev
@@ -182,6 +313,13 @@ const Announcements: React.FC = () => {
         )
       );
       if (selectedAnnouncement) {
+        addReviewRecord(selectedAnnouncement.id, {
+          action: 'reject',
+          operator: '当前监管员',
+          operateTime: now,
+          result: '审核驳回',
+          opinion,
+        });
         setSelectedAnnouncement((prev) =>
           prev
             ? {
@@ -200,8 +338,81 @@ const Announcements: React.FC = () => {
     });
   };
 
+  const handleBatchApprove = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要审核的公告');
+      return;
+    }
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    setAnnouncements((prev) =>
+      prev.map((a) =>
+        selectedRowKeys.includes(a.id)
+          ? {
+              ...a,
+              status: 'approved' as const,
+              reviewer: '当前监管员',
+              reviewTime: now,
+              reviewOpinion: '批量审核通过',
+            }
+          : a
+      )
+    );
+    selectedRowKeys.forEach((id) => {
+      addReviewRecord(id as string, {
+        action: 'approve',
+        operator: '当前监管员',
+        operateTime: now,
+        result: '批量审核通过',
+        opinion: '批量审核通过',
+      });
+    });
+    message.success(`已批量通过 ${selectedRowKeys.length} 条公告`);
+    setSelectedRowKeys([]);
+  };
+
+  const handleBatchReject = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要审核的公告');
+      return;
+    }
+    setIsBatchRejectModal(true);
+  };
+
+  const confirmBatchReject = () => {
+    batchRejectForm.validateFields().then((values) => {
+      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+      const opinion = values.opinion || '批量驳回';
+      setAnnouncements((prev) =>
+        prev.map((a) =>
+          selectedRowKeys.includes(a.id)
+            ? {
+                ...a,
+                status: 'rejected' as const,
+                reviewer: '当前监管员',
+                reviewTime: now,
+                reviewOpinion: opinion,
+              }
+            : a
+        )
+      );
+      selectedRowKeys.forEach((id) => {
+        addReviewRecord(id as string, {
+          action: 'reject',
+          operator: '当前监管员',
+          operateTime: now,
+          result: '批量审核驳回',
+          opinion,
+        });
+      });
+      message.success(`已批量驳回 ${selectedRowKeys.length} 条公告`);
+      setSelectedRowKeys([]);
+      setIsBatchRejectModal(false);
+      batchRejectForm.resetFields();
+    });
+  };
+
   const getComplianceCheckResult = (announcement: Announcement | null) => {
-    if (!announcement) return { passed: true, risks: [], warnings: [] };
+    if (!announcement) return { passed: true, risks: [], warnings: [], needsReview: false };
 
     const risks: string[] = [];
     const warnings: string[] = [];
@@ -223,14 +434,36 @@ const Announcements: React.FC = () => {
     if (content.includes('不接受联合体') || content.includes('不接受')) {
       warnings.push('公告明确不接受联合体投标，请确认是否合理');
     }
-    if (content.includes('注册资本') && !content.includes('项目规模')) {
-      warnings.push('设置了注册资本门槛，建议确认是否与项目规模相匹配');
+    if (content.includes('注册资本')) {
+      const match = content.match(/注册资本不低于(\d+)/);
+      if (match) {
+        const amount = parseInt(match[1]);
+        if (amount >= 5000) {
+          risks.push(`设置了${amount}万元注册资本门槛，可能构成不合理限制，建议复核是否与项目规模相匹配`);
+        } else {
+          warnings.push('设置了注册资本门槛，建议确认是否与项目规模相匹配');
+        }
+      }
+    }
+    if (content.includes('房地产开发') && announcement.type === 'bidding' && announcement.content.includes('房产转让')) {
+      warnings.push('设置了房地产开发资质要求，请确认是否为项目必要条件');
     }
 
-    return { passed: risks.length === 0, risks, warnings };
+    const needsReview = risks.length > 0 || warnings.length > 0;
+    return { passed: !needsReview, risks, warnings, needsReview };
   };
 
   const complianceResult = getComplianceCheckResult(selectedAnnouncement);
+
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (newSelectedRowKeys: React.Key[]) => {
+      setSelectedRowKeys(newSelectedRowKeys);
+    },
+    getCheckboxProps: (record: Announcement) => ({
+      disabled: record.status !== 'pending',
+    }),
+  };
 
   const columns: ColumnsType<Announcement> = [
     {
@@ -330,6 +563,26 @@ const Announcements: React.FC = () => {
     },
   ];
 
+  const getActionText = (action: string) => {
+    const texts: Record<string, string> = {
+      submit: '提交审核',
+      approve: '审核通过',
+      reject: '审核驳回',
+      resubmit: '重新提交',
+    };
+    return texts[action] || action;
+  };
+
+  const getActionColor = (action: string) => {
+    const colors: Record<string, string> = {
+      submit: 'blue',
+      approve: 'green',
+      reject: 'red',
+      resubmit: 'orange',
+    };
+    return colors[action] || 'blue';
+  };
+
   return (
     <div className="space-y-6">
       <Card className="shadow-sm">
@@ -366,16 +619,47 @@ const Announcements: React.FC = () => {
           </Col>
           <Col flex="auto" />
           <Col>
-            <Input
-              placeholder="搜索公告标题或项目名称"
-              prefix={<Search size={16} />}
-              style={{ width: 280 }}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              allowClear
-            />
+            <Space>
+              <Input
+                placeholder="搜索公告标题或项目名称"
+                prefix={<Search size={16} />}
+                style={{ width: 280 }}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                allowClear
+              />
+            </Space>
           </Col>
         </Row>
+        {pendingCount > 0 && (
+          <Row className="mt-4 pt-4 border-t border-gray-100">
+            <Col span={24}>
+              <Space>
+                <span className="text-gray-600">
+                  已选择 <span className="text-primary-500 font-semibold">{selectedRowKeys.length}</span> / {pendingCount} 条待审核
+                </span>
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<Check size={14} />}
+                  onClick={handleBatchApprove}
+                  disabled={selectedRowKeys.length === 0}
+                >
+                  批量通过
+                </Button>
+                <Button
+                  size="small"
+                  danger
+                  icon={<XCircle size={14} />}
+                  onClick={handleBatchReject}
+                  disabled={selectedRowKeys.length === 0}
+                >
+                  批量驳回
+                </Button>
+              </Space>
+            </Col>
+          </Row>
+        )}
       </Card>
 
       <Card className="shadow-sm">
@@ -383,6 +667,7 @@ const Announcements: React.FC = () => {
           columns={columns}
           dataSource={filteredAnnouncements}
           rowKey="id"
+          rowSelection={rowSelection}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -396,10 +681,10 @@ const Announcements: React.FC = () => {
         open={isDetailModal}
         onCancel={() => setIsDetailModal(false)}
         footer={null}
-        width={800}
+        width={900}
       >
         {selectedAnnouncement && (
-          <div>
+          <div className="space-y-4">
             <Descriptions column={2} bordered size="small">
               <Descriptions.Item label="公告标题" span={2}>
                 {selectedAnnouncement.title}
@@ -434,11 +719,38 @@ const Announcements: React.FC = () => {
                 </Descriptions.Item>
               )}
             </Descriptions>
-            <div className="mt-4 p-4 bg-gray-50 rounded">
+            <div className="p-4 bg-gray-50 rounded">
               <h4 className="text-gray-700 font-medium mb-2">公告内容</h4>
               <pre className="whitespace-pre-wrap text-sm text-gray-600 font-sans">
                 {selectedAnnouncement.content}
               </pre>
+            </div>
+            <div>
+              <h4 className="text-gray-700 font-medium mb-3">审核轨迹</h4>
+              <Timeline
+                items={selectedAnnouncement.reviewRecords?.map((record) => ({
+                  color: getActionColor(record.action),
+                  children: (
+                    <div className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-gray-800">
+                          {getActionText(record.action)}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {formatDateTime(record.operateTime)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">
+                        操作人：{record.operator}
+                      </p>
+                      <p className="text-sm text-gray-600">处理结果：{record.result}</p>
+                      {record.opinion && (
+                        <p className="text-sm text-gray-500 mt-1">意见：{record.opinion}</p>
+                      )}
+                    </div>
+                  ),
+                }))}
+              />
             </div>
           </div>
         )}
@@ -497,48 +809,50 @@ const Announcements: React.FC = () => {
           </TabPane>
           <TabPane tab="资格条件检查" key="compliance">
             <div className="space-y-3">
-              {complianceResult.passed ? (
+              {complianceResult.needsReview ? (
+                <Alert
+                  message="需复核 / 存在风险"
+                  description={
+                    <div>
+                      {complianceResult.risks.length > 0 && (
+                        <div className="mb-2">
+                          <p className="font-medium text-red-700 mb-1">风险项：</p>
+                          <ul className="list-disc pl-5 space-y-1">
+                            {complianceResult.risks.map((risk, index) => (
+                              <li key={index} className="text-red-700">
+                                {risk}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {complianceResult.warnings.length > 0 && (
+                        <div>
+                          <p className="font-medium text-orange-700 mb-1">需人工确认项：</p>
+                          <ul className="list-disc pl-5 space-y-1">
+                            {complianceResult.warnings.map((warning, index) => (
+                              <li key={index} className="text-orange-700">
+                                {warning}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  }
+                  type="error"
+                  showIcon
+                  icon={<AlertTriangle size={16} />}
+                />
+              ) : (
                 <Alert
                   message="资格条件检查通过"
                   description="未发现明显的限制性条款和不合理资格要求"
                   type="success"
                   showIcon
                 />
-              ) : (
-                <Alert
-                  message="检查发现风险项"
-                  description={
-                    <ul className="list-disc pl-5 mt-2 space-y-1">
-                      {complianceResult.risks.map((risk, index) => (
-                        <li key={index} className="text-red-700">
-                          {risk}
-                        </li>
-                      ))}
-                    </ul>
-                  }
-                  type="error"
-                  showIcon
-                />
               )}
-              {complianceResult.warnings.length > 0 && (
-                <Alert
-                  message="注意事项"
-                  description={
-                    <ul className="list-disc pl-5 mt-2 space-y-1">
-                      {complianceResult.warnings.map((warning, index) => (
-                        <li key={index}>{warning}</li>
-                      ))}
-                      <li>资格条件中"近五年类似项目业绩"要求合理</li>
-                      <li>项目经理资质要求符合相关规定</li>
-                      <li>未发现设定特定行政区域或特定行业业绩要求</li>
-                    </ul>
-                  }
-                  type="warning"
-                  showIcon
-                  icon={<AlertTriangle size={16} />}
-                />
-              )}
-              {complianceResult.passed && complianceResult.warnings.length === 0 && (
+              {!complianceResult.needsReview && (
                 <Alert
                   message="注意事项"
                   description={
@@ -576,6 +890,31 @@ const Announcements: React.FC = () => {
             rules={[{ required: true, message: '请输入驳回意见' }]}
           >
             <TextArea rows={4} placeholder="请输入驳回原因和修改建议..." />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="批量驳回公告"
+        open={isBatchRejectModal}
+        onCancel={() => {
+          setIsBatchRejectModal(false);
+          batchRejectForm.resetFields();
+        }}
+        onOk={confirmBatchReject}
+        okText="确认批量驳回"
+        okButtonProps={{ danger: true }}
+      >
+        <p className="mb-4 text-gray-600">
+          已选择 <span className="text-red-500 font-semibold">{selectedRowKeys.length}</span> 条公告进行批量驳回，请填写统一驳回意见：
+        </p>
+        <Form form={batchRejectForm} layout="vertical">
+          <Form.Item
+            name="opinion"
+            label="统一驳回意见"
+            rules={[{ required: true, message: '请输入驳回意见' }]}
+          >
+            <TextArea rows={4} placeholder="请输入统一的驳回原因和修改建议..." />
           </Form.Item>
         </Form>
       </Modal>

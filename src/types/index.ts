@@ -19,6 +19,16 @@ export interface Project {
 export type AnnouncementType = 'bidding' | 'clarification' | 'result';
 export type AnnouncementStatus = 'pending' | 'approved' | 'rejected';
 
+export interface ReviewRecord {
+  id: string;
+  announcementId: string;
+  action: 'submit' | 'approve' | 'reject' | 'resubmit';
+  operator: string;
+  operateTime: string;
+  result: string;
+  opinion?: string;
+}
+
 export interface Announcement {
   id: string;
   projectId: string;
@@ -31,6 +41,7 @@ export interface Announcement {
   reviewer: string;
   reviewTime?: string;
   reviewOpinion?: string;
+  reviewRecords?: ReviewRecord[];
 }
 
 export type BiddingStatus = 'scheduled' | 'ongoing' | 'completed';
@@ -137,6 +148,16 @@ export interface CreditEnterprise {
 
 export type MilestoneStatus = 'pending' | 'in_progress' | 'completed' | 'delayed';
 
+export interface MilestoneProgress {
+  id: string;
+  milestoneId: string;
+  updateTime: string;
+  operator: string;
+  progressNote: string;
+  actualDate?: string;
+  attachmentName?: string;
+}
+
 export interface Milestone {
   id: string;
   contractId: string;
@@ -145,6 +166,7 @@ export interface Milestone {
   actualDate?: string;
   status: MilestoneStatus;
   description: string;
+  progressRecords?: MilestoneProgress[];
 }
 
 export interface Contract {
