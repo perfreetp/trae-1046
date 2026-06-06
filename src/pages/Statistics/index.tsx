@@ -233,6 +233,8 @@ const Statistics: React.FC = () => {
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
   const [drillDownType, setDrillDownType] = useState<DrillDownType>(null);
   const [drillDownTitle, setDrillDownTitle] = useState<string>('');
+  const [detailModalType, setDetailModalType] = useState<'project' | 'contract' | 'clue' | 'complaint' | 'announcement' | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<any>(null);
 
   const filteredProjects = useMemo(() => {
     return mockProjects.filter((p) => {
@@ -534,8 +536,26 @@ const Statistics: React.FC = () => {
         { title: '采购人', dataIndex: 'purchaser', width: 160 },
         { title: '登记日期', dataIndex: 'registerDate', width: 110, render: (v) => formatDate(v) },
         { title: '状态', dataIndex: 'status', width: 100, render: (v) => PROJECT_STATUS_OPTIONS.find((o) => o.value === v)?.label },
+        {
+          title: '操作',
+          key: 'action',
+          width: 80,
+          fixed: 'right' as const,
+          render: (_, record) => (
+            <Button
+              type="link"
+              size="small"
+              onClick={() => {
+                setSelectedDetail(record);
+                setDetailModalType('project');
+              }}
+            >
+              查看
+            </Button>
+          ),
+        },
       ];
-      return <Table columns={columns} dataSource={filteredProjects} rowKey="id" pagination={{ pageSize: 10 }} />;
+      return <Table columns={columns} dataSource={filteredProjects} rowKey="id" scroll={{ x: 1000 }} pagination={{ pageSize: 10 }} />;
     }
 
     if (drillDownType === 'contracts') {
@@ -547,8 +567,26 @@ const Statistics: React.FC = () => {
         { title: '乙方', dataIndex: 'partyB', width: 150 },
         { title: '签订日期', dataIndex: 'signDate', width: 110, render: (v) => formatDate(v) },
         { title: '履约进度', dataIndex: 'performanceProgress', width: 100, render: (v) => `${v}%` },
+        {
+          title: '操作',
+          key: 'action',
+          width: 80,
+          fixed: 'right' as const,
+          render: (_, record) => (
+            <Button
+              type="link"
+              size="small"
+              onClick={() => {
+                setSelectedDetail(record);
+                setDetailModalType('contract');
+              }}
+            >
+              查看
+            </Button>
+          ),
+        },
       ];
-      return <Table columns={columns} dataSource={filteredContracts} rowKey="id" pagination={{ pageSize: 10 }} />;
+      return <Table columns={columns} dataSource={filteredContracts} rowKey="id" scroll={{ x: 1000 }} pagination={{ pageSize: 10 }} />;
     }
 
     if (drillDownType === 'announcements') {
@@ -559,8 +597,26 @@ const Statistics: React.FC = () => {
         { title: '提交时间', dataIndex: 'submitTime', width: 160, render: (v) => formatDateTime(v) },
         { title: '状态', dataIndex: 'status', width: 100, render: (v) => ANNOUNCEMENT_STATUS_OPTIONS.find((o) => o.value === v)?.label },
         { title: '审核人', dataIndex: 'reviewer', width: 100, render: (v) => v || '-' },
+        {
+          title: '操作',
+          key: 'action',
+          width: 80,
+          fixed: 'right' as const,
+          render: (_, record) => (
+            <Button
+              type="link"
+              size="small"
+              onClick={() => {
+                setSelectedDetail(record);
+                setDetailModalType('announcement');
+              }}
+            >
+              查看
+            </Button>
+          ),
+        },
       ];
-      return <Table columns={columns} dataSource={filteredAnnouncements} rowKey="id" pagination={{ pageSize: 10 }} />;
+      return <Table columns={columns} dataSource={filteredAnnouncements} rowKey="id" scroll={{ x: 1100 }} pagination={{ pageSize: 10 }} />;
     }
 
     if (drillDownType === 'clues') {
@@ -574,8 +630,26 @@ const Statistics: React.FC = () => {
           return opt ? <Tag color={opt.color}>{opt.label}</Tag> : v;
         } },
         { title: '创建时间', dataIndex: 'createTime', width: 160, render: (v) => formatDateTime(v) },
+        {
+          title: '操作',
+          key: 'action',
+          width: 80,
+          fixed: 'right' as const,
+          render: (_, record) => (
+            <Button
+              type="link"
+              size="small"
+              onClick={() => {
+                setSelectedDetail(record);
+                setDetailModalType('clue');
+              }}
+            >
+              查看
+            </Button>
+          ),
+        },
       ];
-      return <Table columns={columns} dataSource={filteredClues} rowKey="id" pagination={{ pageSize: 10 }} />;
+      return <Table columns={columns} dataSource={filteredClues} rowKey="id" scroll={{ x: 1100 }} pagination={{ pageSize: 10 }} />;
     }
 
     if (drillDownType === 'complaints') {
@@ -586,8 +660,26 @@ const Statistics: React.FC = () => {
         { title: '提交时间', dataIndex: 'submitTime', width: 160, render: (v) => formatDateTime(v) },
         { title: '状态', dataIndex: 'status', width: 100, render: (v) => COMPLAINT_STATUS_OPTIONS.find((o) => o.value === v)?.label },
         { title: '处理人', dataIndex: 'handler', width: 100, render: (v) => v || '-' },
+        {
+          title: '操作',
+          key: 'action',
+          width: 80,
+          fixed: 'right' as const,
+          render: (_, record) => (
+            <Button
+              type="link"
+              size="small"
+              onClick={() => {
+                setSelectedDetail(record);
+                setDetailModalType('complaint');
+              }}
+            >
+              查看
+            </Button>
+          ),
+        },
       ];
-      return <Table columns={columns} dataSource={filteredComplaints} rowKey="id" pagination={{ pageSize: 10 }} />;
+      return <Table columns={columns} dataSource={filteredComplaints} rowKey="id" scroll={{ x: 1100 }} pagination={{ pageSize: 10 }} />;
     }
 
     return null;
@@ -778,6 +870,132 @@ const Statistics: React.FC = () => {
         width={1200}
       >
         {renderDrillDownTable()}
+      </Modal>
+
+      <Modal
+        title={
+          detailModalType === 'project' ? '项目详情' :
+          detailModalType === 'contract' ? '合同详情' :
+          detailModalType === 'clue' ? '线索详情' :
+          detailModalType === 'complaint' ? '投诉详情' :
+          detailModalType === 'announcement' ? '公告详情' : '详情'
+        }
+        open={detailModalType !== null}
+        onCancel={() => {
+          setDetailModalType(null);
+          setSelectedDetail(null);
+        }}
+        footer={null}
+        width={800}
+      >
+        {selectedDetail && detailModalType === 'project' && (
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label="项目名称" span={2}>{selectedDetail.name}</Descriptions.Item>
+            <Descriptions.Item label="项目编号">{selectedDetail.code}</Descriptions.Item>
+            <Descriptions.Item label="交易类型">
+              {PROJECT_TYPE_OPTIONS.find((o) => o.value === selectedDetail.type)?.label}
+            </Descriptions.Item>
+            <Descriptions.Item label="预算金额">{formatMoney(selectedDetail.budget)}</Descriptions.Item>
+            <Descriptions.Item label="状态">
+              {PROJECT_STATUS_OPTIONS.find((o) => o.value === selectedDetail.status)?.label}
+            </Descriptions.Item>
+            <Descriptions.Item label="采购人">{selectedDetail.purchaser}</Descriptions.Item>
+            <Descriptions.Item label="代理机构">{selectedDetail.agency}</Descriptions.Item>
+            <Descriptions.Item label="登记日期">{formatDate(selectedDetail.registerDate)}</Descriptions.Item>
+            <Descriptions.Item label="项目描述" span={2}>
+              {selectedDetail.description || '无'}
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+        {selectedDetail && detailModalType === 'contract' && (
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label="合同编号" span={2}>{selectedDetail.contractNo}</Descriptions.Item>
+            <Descriptions.Item label="项目名称" span={2}>{selectedDetail.projectName}</Descriptions.Item>
+            <Descriptions.Item label="合同金额">{formatMoney(selectedDetail.contractAmount)}</Descriptions.Item>
+            <Descriptions.Item label="履约进度">{selectedDetail.performanceProgress}%</Descriptions.Item>
+            <Descriptions.Item label="甲方">{selectedDetail.partyA}</Descriptions.Item>
+            <Descriptions.Item label="乙方">{selectedDetail.partyB}</Descriptions.Item>
+            <Descriptions.Item label="签订日期">{formatDate(selectedDetail.signDate)}</Descriptions.Item>
+            <Descriptions.Item label="履行期限">
+              {formatDate(selectedDetail.startDate)} ~ {formatDate(selectedDetail.endDate)}
+            </Descriptions.Item>
+            <Descriptions.Item label="合同内容" span={2}>
+              {selectedDetail.content || '无'}
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+        {selectedDetail && detailModalType === 'clue' && (
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label="线索标题" span={2}>{selectedDetail.title}</Descriptions.Item>
+            <Descriptions.Item label="关联项目">{selectedDetail.projectName || '-'}</Descriptions.Item>
+            <Descriptions.Item label="来源">
+              {CLUE_SOURCE_OPTIONS.find((o) => o.value === selectedDetail.source)?.label}
+            </Descriptions.Item>
+            <Descriptions.Item label="风险等级">
+              {RISK_LEVEL_OPTIONS.find((o) => o.value === selectedDetail.riskLevel)?.label}
+            </Descriptions.Item>
+            <Descriptions.Item label="状态">
+              {selectedDetail.status}
+            </Descriptions.Item>
+            <Descriptions.Item label="创建时间">{formatDateTime(selectedDetail.createTime)}</Descriptions.Item>
+            <Descriptions.Item label="线索描述" span={2}>{selectedDetail.description}</Descriptions.Item>
+            {selectedDetail.handler && (
+              <>
+                <Descriptions.Item label="处理人">{selectedDetail.handler}</Descriptions.Item>
+                <Descriptions.Item label="处理时间">
+                  {selectedDetail.handleTime ? formatDateTime(selectedDetail.handleTime) : '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="处理结果" span={2}>
+                  {selectedDetail.handleResult || '-'}
+                </Descriptions.Item>
+              </>
+            )}
+          </Descriptions>
+        )}
+        {selectedDetail && detailModalType === 'complaint' && (
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label="投诉标题" span={2}>{selectedDetail.title}</Descriptions.Item>
+            <Descriptions.Item label="关联项目">{selectedDetail.projectName || '-'}</Descriptions.Item>
+            <Descriptions.Item label="投诉人">{selectedDetail.complainant}</Descriptions.Item>
+            <Descriptions.Item label="联系方式">{selectedDetail.contact || '-'}</Descriptions.Item>
+            <Descriptions.Item label="提交时间">{formatDateTime(selectedDetail.submitTime)}</Descriptions.Item>
+            <Descriptions.Item label="状态">
+              {COMPLAINT_STATUS_OPTIONS.find((o) => o.value === selectedDetail.status)?.label}
+            </Descriptions.Item>
+            <Descriptions.Item label="投诉内容" span={2}>{selectedDetail.content}</Descriptions.Item>
+            {selectedDetail.handler && (
+              <>
+                <Descriptions.Item label="处理人">{selectedDetail.handler}</Descriptions.Item>
+                <Descriptions.Item label="回复时间">
+                  {selectedDetail.replyTime ? formatDateTime(selectedDetail.replyTime) : '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="回复内容" span={2}>
+                  {selectedDetail.replyContent || '-'}
+                </Descriptions.Item>
+              </>
+            )}
+          </Descriptions>
+        )}
+        {selectedDetail && detailModalType === 'announcement' && (
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label="公告标题" span={2}>{selectedDetail.title}</Descriptions.Item>
+            <Descriptions.Item label="项目名称">{selectedDetail.projectName}</Descriptions.Item>
+            <Descriptions.Item label="公告类型">
+              {ANNOUNCEMENT_TYPE_OPTIONS.find((o) => o.value === selectedDetail.type)?.label}
+            </Descriptions.Item>
+            <Descriptions.Item label="提交时间">{formatDateTime(selectedDetail.submitTime)}</Descriptions.Item>
+            <Descriptions.Item label="状态">
+              {ANNOUNCEMENT_STATUS_OPTIONS.find((o) => o.value === selectedDetail.status)?.label}
+            </Descriptions.Item>
+            <Descriptions.Item label="审核人">{selectedDetail.reviewer || '-'}</Descriptions.Item>
+            {selectedDetail.reviewTime && (
+              <Descriptions.Item label="审核时间">{formatDateTime(selectedDetail.reviewTime)}</Descriptions.Item>
+            )}
+            {selectedDetail.reviewOpinion && (
+              <Descriptions.Item label="审核意见" span={2}>{selectedDetail.reviewOpinion}</Descriptions.Item>
+            )}
+          </Descriptions>
+        )}
       </Modal>
     </div>
   );

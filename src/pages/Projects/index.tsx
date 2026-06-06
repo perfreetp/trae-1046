@@ -32,6 +32,7 @@ import {
   FileCheck,
   HandshakeIcon,
   TrendingUp,
+  MessageSquare,
 } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import type {
@@ -347,6 +348,7 @@ const lifecycleStages = [
   { key: 'evaluating', title: '结果公示', icon: <CheckCircle2 size={16} />, color: 'gold' },
   { key: 'contract', title: '合同签订', icon: <HandshakeIcon size={16} />, color: 'orange' },
   { key: 'performing', title: '履约进行', icon: <TrendingUp size={16} />, color: 'green' },
+  { key: 'complaints', title: '投诉线索', icon: <MessageSquare size={16} />, color: 'red' },
   { key: 'completed', title: '项目完成', icon: <CheckCircle2 size={16} />, color: 'success' },
 ];
 
@@ -534,7 +536,8 @@ const Projects: React.FC = () => {
       evaluating: 3,
       contract: 4,
       performing: 5,
-      completed: 6,
+      complaints: 6,
+      completed: 7,
     };
     return statusOrder[status] ?? 0;
   };
@@ -828,7 +831,9 @@ const Projects: React.FC = () => {
                     const currentIndex = getCurrentStageIndex(selectedProject.status);
                     const isPast = index < currentIndex;
                     const isCurrent = index === currentIndex;
-                    const dotColor = isPast ? 'green' : isCurrent ? 'blue' : 'gray';
+                    const isComplaintStage = stage.key === 'complaints';
+                    let dotColor = isPast ? 'green' : isCurrent ? 'blue' : 'gray';
+                    if (isComplaintStage) dotColor = 'gray';
                     return {
                       color: dotColor,
                       dot: stage.icon,
@@ -836,22 +841,31 @@ const Projects: React.FC = () => {
                         <div className="pb-4">
                           <div className="font-medium text-gray-800 mb-1">
                             {stage.title}
-                            {isCurrent && <Tag color="blue" className="ml-2">进行中</Tag>}
-                            {isPast && <Tag color="green" className="ml-2">已完成</Tag>}
+                            {isCurrent && !isComplaintStage && <Tag color="blue" className="ml-2">进行中</Tag>}
+                            {isPast && !isComplaintStage && <Tag color="green" className="ml-2">已完成</Tag>}
+                            {isComplaintStage && <Tag color="default" className="ml-2">全阶段</Tag>}
                           </div>
                           {stage.key === 'registered' && (
                             <p className="text-sm text-gray-500">
                               登记时间：{formatDateTime(selectedProject.registerDate + ' 00:00:00')}
                             </p>
                           )}
-                          {isPast || isCurrent ? (
-                            <p className="text-sm text-gray-500">
-                              {isPast ? '该阶段已完成' : '当前处于此阶段'}
+                          {stage.key === 'complaints' ? (
+                            <p className="text-sm text-gray-400">
+                              该项目暂无可公开的投诉或异常线索记录
                             </p>
                           ) : (
-                            <p className="text-sm text-gray-400">
-                              暂未进入该阶段
-                            </p>
+                            <>
+                              {isPast || isCurrent ? (
+                                <p className="text-sm text-gray-500">
+                                  {isPast ? '该阶段已完成' : '当前处于此阶段'}
+                                </p>
+                              ) : (
+                                <p className="text-sm text-gray-400">
+                                  暂未进入该阶段
+                                </p>
+                              )}
+                            </>
                           )}
                         </div>
                       ),

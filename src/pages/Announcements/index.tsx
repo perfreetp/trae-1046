@@ -16,10 +16,10 @@ import {
   Alert,
   Descriptions,
   Input as AntInput,
-  Checkbox,
   Timeline,
+  RefreshCw,
 } from 'antd';
-import { Search, Eye, Check, XCircle, FileDiff, AlertTriangle } from 'lucide-react';
+import { Search, Eye, Check, XCircle, FileDiff, AlertTriangle, RotateCcw } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import type { Announcement, ReviewRecord } from '@/types';
 import {
@@ -191,6 +191,7 @@ const Announcements: React.FC = () => {
   const [isCompareModal, setIsCompareModal] = useState(false);
   const [isRejectModal, setIsRejectModal] = useState(false);
   const [isBatchRejectModal, setIsBatchRejectModal] = useState(false);
+  const [isResubmitModal, setIsResubmitModal] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -198,6 +199,7 @@ const Announcements: React.FC = () => {
   const [searchText, setSearchText] = useState<string>('');
   const [rejectForm] = Form.useForm();
   const [batchRejectForm] = Form.useForm();
+  const [resubmitForm] = Form.useForm();
 
   const filteredAnnouncements = useMemo(() => {
     return announcements.filter((a) => {
@@ -224,69 +226,65 @@ const Announcements: React.FC = () => {
     return option ? option.label : type;
   };
 
-  const addReviewRecord = (announcementId: string, record: Omit<ReviewRecord, 'id' | 'announcementId'>) => {
-    const newRecord: ReviewRecord = {
-      ...record,
-      id: `R${Date.now()}`,
-      announcementId,
-    };
+  const addReviewRecord = (
+    announcementIds: string | string[],
+    record: Omit<ReviewRecord, 'id' | 'announcementId'>,
+    updateFields?: Partial<Announcement>
+  ) => {
+    const ids = Array.isArray(announcementIds) ? announcementIds : [announcementIds];
+    const now = record.operateTime || new Date().toISOString().replace('T', ' ').slice(0, 19);
+
     setAnnouncements((prev) =>
-      prev.map((a) =>
-        a.id === announcementId
-          ? {
-              ...a,
-              reviewRecords: [...(a.reviewRecords || []), newRecord],
-            }
-          : a
-      )
+      prev.map((a) => {
+        if (ids.includes(a.id)) {
+          const newRecord: ReviewRecord = {
+            ...record,
+            id: `R${Date.now()}-${a.id}`,
+            announcementId: a.id,
+            operateTime: now,
+          };
+          return {
+            ...a,
+            ...updateFields,
+            reviewer: updateFields?.reviewer ?? a.reviewer,
+            reviewTime: updateFields?.reviewTime ?? a.reviewTime,
+            reviewOpinion: updateFields?.reviewOpinion ?? a.reviewOpinion,
+            reviewRecords: [...(a.reviewRecords || []), newRecord],
+          };
+        }
+        return a;
+      })
     );
-    if (selectedAnnouncement?.id === announcementId) {
-      setSelectedAnnouncement((prev) =>
-        prev
-          ? {
-              ...prev,
-              reviewRecords: [...(prev.reviewRecords || []), newRecord],
-            }
-          : null
-      );
+
+    if (selectedAnnouncement && ids.includes(selectedAnnouncement.id)) {
+      setAnnouncements((prev) => {
+        const updated = prev.find((a) => a.id === selectedAnnouncement.id);
+        if (updated) {
+          setSelectedAnnouncement(updated);
+        }
+        return prev;
+      });
     }
   };
 
   const handleApprove = (record: Announcement) => {
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
-    setAnnouncements((prev) =>
-      prev.map((a) =>
-        a.id === record.id
-          ? {
-              ...a,
-              status: 'approved' as const,
-              reviewer: '当前监管员',
-              reviewTime: now,
-              reviewOpinion: '公告内容合规，审核通过',
-            }
-          : a
-      )
+    addReviewRecord(
+      record.id,
+      {
+        action: 'approve',
+        operator: '当前监管员',
+        operateTime: now,
+        result: '审核通过',
+        opinion: '公告内容合规，审核通过',
+      },
+      {
+        status: 'approved',
+        reviewer: '当前监管员',
+        reviewTime: now,
+        reviewOpinion: '公告内容合规，审核通过',
+      }
     );
-    addReviewRecord(record.id, {
-      action: 'approve',
-      operator: '当前监管员',
-      operateTime: now,
-      result: '审核通过',
-      opinion: '公告内容合规，审核通过',
-    });
-    if (selectedAnnouncement?.id === record.id) {
-      setSelectedAnnouncement((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: 'approved' as const,
-              reviewer: '当前监管员',
-              reviewTime: now,
-              reviewOpinion: '公告内容合规，审核通过',
-            }
-          : null
-      );
-    }
     message.success('审核通过成功');
   };
 
@@ -299,37 +297,22 @@ const Announcements: React.FC = () => {
     rejectForm.validateFields().then((values) => {
       const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
       const opinion = values.opinion || '不符合发布要求';
-      setAnnouncements((prev) =>
-        prev.map((a) =>
-          a.id === selectedAnnouncement?.id
-            ? {
-                ...a,
-                status: 'rejected' as const,
-                reviewer: '当前监管员',
-                reviewTime: now,
-                reviewOpinion: opinion,
-              }
-            : a
-        )
-      );
       if (selectedAnnouncement) {
-        addReviewRecord(selectedAnnouncement.id, {
-          action: 'reject',
-          operator: '当前监管员',
-          operateTime: now,
-          result: '审核驳回',
-          opinion,
-        });
-        setSelectedAnnouncement((prev) =>
-          prev
-            ? {
-                ...prev,
-                status: 'rejected' as const,
-                reviewer: '当前监管员',
-                reviewTime: now,
-                reviewOpinion: opinion,
-              }
-            : null
+        addReviewRecord(
+          selectedAnnouncement.id,
+          {
+            action: 'reject',
+            operator: '当前监管员',
+            operateTime: now,
+            result: '审核驳回',
+            opinion,
+          },
+          {
+            status: 'rejected',
+            reviewer: '当前监管员',
+            reviewTime: now,
+            reviewOpinion: opinion,
+          }
         );
       }
       message.success('已驳回');
@@ -344,28 +327,22 @@ const Announcements: React.FC = () => {
       return;
     }
     const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
-    setAnnouncements((prev) =>
-      prev.map((a) =>
-        selectedRowKeys.includes(a.id)
-          ? {
-              ...a,
-              status: 'approved' as const,
-              reviewer: '当前监管员',
-              reviewTime: now,
-              reviewOpinion: '批量审核通过',
-            }
-          : a
-      )
-    );
-    selectedRowKeys.forEach((id) => {
-      addReviewRecord(id as string, {
+    addReviewRecord(
+      selectedRowKeys as string[],
+      {
         action: 'approve',
         operator: '当前监管员',
         operateTime: now,
         result: '批量审核通过',
         opinion: '批量审核通过',
-      });
-    });
+      },
+      {
+        status: 'approved',
+        reviewer: '当前监管员',
+        reviewTime: now,
+        reviewOpinion: '批量审核通过',
+      }
+    );
     message.success(`已批量通过 ${selectedRowKeys.length} 条公告`);
     setSelectedRowKeys([]);
   };
@@ -382,32 +359,60 @@ const Announcements: React.FC = () => {
     batchRejectForm.validateFields().then((values) => {
       const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
       const opinion = values.opinion || '批量驳回';
-      setAnnouncements((prev) =>
-        prev.map((a) =>
-          selectedRowKeys.includes(a.id)
-            ? {
-                ...a,
-                status: 'rejected' as const,
-                reviewer: '当前监管员',
-                reviewTime: now,
-                reviewOpinion: opinion,
-              }
-            : a
-        )
-      );
-      selectedRowKeys.forEach((id) => {
-        addReviewRecord(id as string, {
+      addReviewRecord(
+        selectedRowKeys as string[],
+        {
           action: 'reject',
           operator: '当前监管员',
           operateTime: now,
           result: '批量审核驳回',
           opinion,
-        });
-      });
+        },
+        {
+          status: 'rejected',
+          reviewer: '当前监管员',
+          reviewTime: now,
+          reviewOpinion: opinion,
+        }
+      );
       message.success(`已批量驳回 ${selectedRowKeys.length} 条公告`);
       setSelectedRowKeys([]);
       setIsBatchRejectModal(false);
       batchRejectForm.resetFields();
+    });
+  };
+
+  const showResubmitModal = (record: Announcement) => {
+    setSelectedAnnouncement(record);
+    setIsResubmitModal(true);
+  };
+
+  const handleResubmit = () => {
+    resubmitForm.validateFields().then((values) => {
+      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+      const opinion = values.opinion || '已按要求修改，重新提交';
+      if (selectedAnnouncement) {
+        addReviewRecord(
+          selectedAnnouncement.id,
+          {
+            action: 'resubmit',
+            operator: '公告提交人',
+            operateTime: now,
+            result: '重新提交',
+            opinion,
+          },
+          {
+            status: 'pending',
+            reviewer: '',
+            reviewTime: undefined,
+            reviewOpinion: undefined,
+            submitTime: now,
+          }
+        );
+      }
+      message.success('已重新提交审核');
+      setIsResubmitModal(false);
+      resubmitForm.resetFields();
     });
   };
 
@@ -508,9 +513,25 @@ const Announcements: React.FC = () => {
       render: (reviewer) => reviewer || '-',
     },
     {
+      title: '审核时间',
+      dataIndex: 'reviewTime',
+      key: 'reviewTime',
+      width: 170,
+      render: (time) => time ? formatDateTime(time) : '-',
+    },
+    {
+      title: '审核意见',
+      dataIndex: 'reviewOpinion',
+      key: 'reviewOpinion',
+      width: 200,
+      ellipsis: true,
+      render: (opinion) => opinion || '-',
+    },
+    {
       title: '操作',
       key: 'action',
-      width: 220,
+      width: 260,
+      fixed: 'right' as const,
       render: (_, record) => (
         <Space>
           <Button
@@ -557,6 +578,16 @@ const Announcements: React.FC = () => {
                 驳回
               </Button>
             </>
+          )}
+          {record.status === 'rejected' && (
+            <Button
+              type="link"
+              size="small"
+              icon={<RotateCcw size={14} />}
+              onClick={() => showResubmitModal(record)}
+            >
+              重新提交
+            </Button>
           )}
         </Space>
       ),
@@ -668,6 +699,7 @@ const Announcements: React.FC = () => {
           dataSource={filteredAnnouncements}
           rowKey="id"
           rowSelection={rowSelection}
+          scroll={{ x: 1600 }}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -915,6 +947,30 @@ const Announcements: React.FC = () => {
             rules={[{ required: true, message: '请输入驳回意见' }]}
           >
             <TextArea rows={4} placeholder="请输入统一的驳回原因和修改建议..." />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="重新提交审核"
+        open={isResubmitModal}
+        onCancel={() => {
+          setIsResubmitModal(false);
+          resubmitForm.resetFields();
+        }}
+        onOk={handleResubmit}
+        okText="确认提交"
+      >
+        <p className="mb-4 text-gray-600">
+          公告：<span className="font-medium">{selectedAnnouncement?.title}</span>
+        </p>
+        <Form form={resubmitForm} layout="vertical">
+          <Form.Item
+            name="opinion"
+            label="修改说明"
+            rules={[{ required: true, message: '请输入修改说明' }]}
+          >
+            <TextArea rows={4} placeholder="请描述针对驳回意见做了哪些修改..." />
           </Form.Item>
         </Form>
       </Modal>
