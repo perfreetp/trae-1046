@@ -344,8 +344,9 @@ const initialContracts: Contract[] = [
 const lifecycleStages = [
   { key: 'registered', title: '项目登记', icon: <FileText size={16} />, color: 'blue' },
   { key: 'announced', title: '公告发布', icon: <FileCheck size={16} />, color: 'cyan' },
-  { key: 'bidding', title: '开标评标', icon: <Clock size={16} />, color: 'purple' },
-  { key: 'evaluating', title: '结果公示', icon: <CheckCircle2 size={16} />, color: 'gold' },
+  { key: 'bidding', title: '开标', icon: <Clock size={16} />, color: 'purple' },
+  { key: 'evaluating', title: '评标', icon: <AlertCircle size={16} />, color: 'geekblue' },
+  { key: 'result', title: '结果公示', icon: <CheckCircle2 size={16} />, color: 'gold' },
   { key: 'contract', title: '合同签订', icon: <HandshakeIcon size={16} />, color: 'orange' },
   { key: 'performing', title: '履约进行', icon: <TrendingUp size={16} />, color: 'green' },
   { key: 'complaints', title: '投诉线索', icon: <MessageSquare size={16} />, color: 'red' },
@@ -534,10 +535,11 @@ const Projects: React.FC = () => {
       announced: 1,
       bidding: 2,
       evaluating: 3,
-      contract: 4,
-      performing: 5,
-      complaints: 6,
-      completed: 7,
+      result: 4,
+      contract: 5,
+      performing: 6,
+      complaints: 7,
+      completed: 8,
     };
     return statusOrder[status] ?? 0;
   };
